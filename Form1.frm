@@ -1,6 +1,6 @@
 VERSION 5.00
-Object = "{648A5603-2C6E-101B-82B6-000000000014}#1.1#0"; "mscomm32.ocx"
-Object = "{F9043C88-F6F2-101A-A3C9-08002B2F49FB}#1.2#0"; "comdlg32.ocx"
+Object = "{648A5603-2C6E-101B-82B6-000000000014}#1.1#0"; "MSCOMM32.OCX"
+Object = "{F9043C88-F6F2-101A-A3C9-08002B2F49FB}#1.2#0"; "COMDLG32.OCX"
 Object = "{3B7C8863-D78F-101B-B9B5-04021C009402}#1.2#0"; "RICHTX32.OCX"
 Object = "{5E9E78A0-531B-11CF-91F6-C2863C385E30}#1.0#0"; "MSFLXGRD.OCX"
 Object = "{248DD890-BB45-11CF-9ABC-0080C7E7B78D}#1.0#0"; "MSWINSCK.OCX"
@@ -151,7 +151,6 @@ Begin VB.Form frmKnxScsGate
       _ExtentX        =   8493
       _ExtentY        =   13123
       _Version        =   393217
-      Enabled         =   -1  'True
       TextRTF         =   $"Form1.frx":0000
    End
    Begin VB.CommandButton cmdExit 
@@ -1104,7 +1103,7 @@ Dim ln As Integer
 '------------------------------------------------------------------
   '    LogPrint ("< received data...")
       Winsock1.GetData msg
-      LogPrint (msg)
+'      LogPrint (msg)                   ' SOLO PER DEBUG
     
       If (tcpmode = 0) Then '0->nothing to do
 '         Winsock1.Close
