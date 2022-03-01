@@ -10,11 +10,11 @@ Begin VB.Form frmKnxScsGate
    ClientHeight    =   9120
    ClientLeft      =   225
    ClientTop       =   765
-   ClientWidth     =   12315
+   ClientWidth     =   18645
    LinkTopic       =   "Form1"
    ScaleHeight     =   589.826
    ScaleMode       =   0  'User
-   ScaleWidth      =   484.08
+   ScaleWidth      =   732.901
    Begin VB.CheckBox CheckTapPct 
       BackColor       =   &H80000012&
       Caption         =   "tapparelle %"
@@ -98,6 +98,7 @@ Begin VB.Form frmKnxScsGate
    End
    Begin VB.CommandButton Openb 
       Caption         =   "Open channel"
+      Enabled         =   0   'False
       Height          =   495
       Left            =   360
       TabIndex        =   6
@@ -130,6 +131,7 @@ Begin VB.Form frmKnxScsGate
    End
    Begin VB.CommandButton firmware 
       Caption         =   "new firmware"
+      Enabled         =   0   'False
       Height          =   495
       Left            =   7560
       TabIndex        =   3
@@ -144,11 +146,11 @@ Begin VB.Form frmKnxScsGate
    End
    Begin RichTextLib.RichTextBox Rich 
       Height          =   7440
-      Left            =   9667
+      Left            =   9660
       TabIndex        =   2
       Top             =   0
-      Width           =   4815
-      _ExtentX        =   8493
+      Width           =   6255
+      _ExtentX        =   11033
       _ExtentY        =   13123
       _Version        =   393217
       TextRTF         =   $"Form1.frx":0000
@@ -279,6 +281,8 @@ Dim kByte As Long
 Dim iMode As Byte  '  0=normale      1=serial monitor       2=gate
 Dim bitVal(8) As Byte
 Dim bNewCell As Boolean
+Dim logcomment As Byte
+Dim filelog As Integer
 
 Dim gate As Byte   '  1=scs   2=konnex vimar   3=konnex true
 
@@ -292,7 +296,7 @@ Private Const TLGR_STOP = 4
 Private Const TLGR_MORE = 5
 Private Const TLGR_LESS = 6
 
-Private Const MAINCAPTION As String = "KnxScsGate V5.2 (TCP)"
+Private Const MAINCAPTION As String = "KnxScsGate V6.0 (TCP)"
 Private Const APPNAME As String = "KnxScsGate"
 Private Const GR_LINE As Byte = 0
 Private Const GR_ADDRESS As Byte = 1
@@ -451,6 +455,10 @@ Private Sub firmware_Click()
     End If
 End Sub
 
+Private Sub Form_Unload(Cancel As Integer)
+    Close filelog
+End Sub
+
 Private Sub Griglia1_Click()
     Dim ptr, command, tClick
      
@@ -596,8 +604,14 @@ Private Sub Griglia1_KeyPress(ikey As Integer)
                 Griglia1.text = ""
             ElseIf sKey = "d" Or sKey = "D" Then
                 Griglia1.text = "DIM"
-            ElseIf sKey = "l" Or sKey = "L" Or sKey = "s" Or sKey = "S" Then
+            ElseIf sKey = "i" Or sKey = "I" Then
+                Griglia1.text = "D+-"
+            ElseIf sKey = "l" Or sKey = "L" Then ' Or sKey = "s" Then
                 Griglia1.text = "LUCE"
+            ElseIf sKey = "s" Or sKey = "S" Then    ' equivalente a TAP
+                Griglia1.text = "STO"
+            ElseIf sKey = "u" Or sKey = "U" Then
+                Griglia1.text = "UPD"
             ElseIf sKey = "t" Or sKey = "T" Then
                 Griglia1.text = "TAP"
             ElseIf sKey = "g" Or sKey = "G" Then
@@ -955,7 +969,22 @@ Private Sub Rich_KeyPress(KeyAscii As Integer)
     If iMode = 1 Then
 '        LogPrint (">" + Chr(KeyAscii))
         sChar = Chr(KeyAscii)
-        WriteBuf (sChar)
+        
+        If sChar = "*" Then
+            If logcomment = 0 Then
+                logcomment = 1
+                LogPrintCont ("***__")
+            Else
+                logcomment = 0
+                LogPrintCont ("__***")
+            End If
+        End If
+            
+        Print #filelog, sChar;
+        
+        If logcomment = 0 Then
+            WriteBuf (sChar)
+        End If
 '       sResp = ReadWait(1024, 5)
 '       LogPrint ("response: " & sResp)
     End If
@@ -1087,7 +1116,8 @@ Dim device, sectorline, devtype, descr, maxp As String
     
       If (tcpmode > 0) Then ' upload
 '        If (CheckTapPct.Value = 1) Then
-'            Winsock1.SendData "#putdevice {""devclear"":""true""}"
+'            LogPrint ("#putdevice {""coverpct"":""true"",""devclear"":""true""}")
+'            Winsock1.SendData "#putdevice {""coverpct"":""true"",""devclear"":""true""}"
 '        Else
             LogPrint ("#putdevice {""coverpct"":""false"",""devclear"":""true""}")
             Winsock1.SendData "#putdevice {""coverpct"":""false"",""devclear"":""true""}"
@@ -1174,10 +1204,19 @@ Dim ptr As Integer
             Griglia1.TextMatrix(ptr, GR_TIPO) = "DIM"
         ElseIf (devtype = "4") Then
             Griglia1.TextMatrix(ptr, GR_TIPO) = "DIM"
+        ElseIf (devtype = "24") Then
+            Griglia1.TextMatrix(ptr, GR_TIPO) = "D+-"
         ElseIf (devtype = "8") Then
             Griglia1.TextMatrix(ptr, GR_TIPO) = "TAP"
+'            Griglia1.TextMatrix(ptr, GR_TIPO) = "STO"
         ElseIf (devtype = "9") Then
             Griglia1.TextMatrix(ptr, GR_TIPO) = "TAP"
+'            Griglia1.TextMatrix(ptr, GR_TIPO) = "STO"
+            CheckTapPct.Value = 1
+        ElseIf (devtype = "18") Then
+            Griglia1.TextMatrix(ptr, GR_TIPO) = "UPD"
+        ElseIf (devtype = "19") Then
+            Griglia1.TextMatrix(ptr, GR_TIPO) = "UPD"
             CheckTapPct.Value = 1
         ElseIf (devtype = "11") Then
             Griglia1.TextMatrix(ptr, GR_TIPO) = "GEN"
@@ -1219,11 +1258,26 @@ Dim device, sectorline, devtype, devtypeDes, descr, maxp As String
                 Else
                     devtype = "4"
                 End If
+            ElseIf (devtypeDes = "D+-") Then
+                devtype = "24"
+            
             ElseIf (devtypeDes = "TAP") Then
                 If CheckTapPct.Value = 1 Then
                     devtype = "9"
                 Else
                     devtype = "8"
+                End If
+            ElseIf (devtypeDes = "STO") Then
+                If CheckTapPct.Value = 1 Then
+                    devtype = "9"
+                Else
+                    devtype = "8"
+                End If
+            ElseIf (devtypeDes = "UPD") Then
+                If CheckTapPct.Value = 1 Then
+                    devtype = "19"
+                Else
+                    devtype = "18"
                 End If
             End If
             tcpmode = tcpmode + 1
@@ -1271,10 +1325,10 @@ Private Function tcpJarg(buffer As String, argument As String) As String
     If (p1 > 0) Then
         p2 = InStr(p1 + 1, buffer, ":")
         If (p2 > 0) Then
-            p3 = InStr(p2 + 1, buffer, Chr(34))
+            p3 = InStr(p2 + 1, buffer, Chr(34)) ' prima "
             If (p3 > 0) Then
-                p4 = InStr(p3 + 2, buffer, Chr(34))
-                If (p4 > 0) Then
+                p4 = InStr(p3 + 1, buffer, Chr(34)) ' successiva "
+                If (p4 > 0) And ((p4 - p3) > 1) Then
                     valore = Mid$(buffer, p3 + 1, p4 - p3 - 1)
                 End If
             End If
@@ -1447,7 +1501,7 @@ Private Function DecodeSCS(sResp)
 '        Call setGrid(Griglia1, GR_SW2, GR_BACK_SWOFF, True, GR_CMD_SWOFF)
     End If
 End Function
-Private Function DecodeKNX(sResp)
+Private Function DecodeKNX(sResp)   '  ----->>>>>>>>>>>>>>> ADATTARE A STO UPD TAP <<<<<<<<<<<<<<<<<
     Dim prefix, origin, destination, dsub, network, command, check As String
     Dim ptr, addressMain, addressSub, cmdlen As Integer
     
@@ -1671,6 +1725,7 @@ End Function
 Private Sub Form_Load()
          Dim t As Integer
          Dim x As Long
+         Dim t1, t2
          
          frmKnxScsGate.Caption = MAINCAPTION
          bauds = 115200
@@ -1679,6 +1734,7 @@ Private Sub Form_Load()
          iMode = 0
          conntype = 0
          tcpmode = 0
+         logcomment = 0
          
          bitVal(1) = &H80
          bitVal(2) = &H40
@@ -1691,6 +1747,13 @@ Private Sub Form_Load()
          t = 0
     tcpFrame.Visible = False
 
+    t1 = Now    ' 15/03/2021 15:40:02
+    t2 = Mid(Now, 7, 4) + Mid(Now, 4, 2) + Mid(Now, 1, 2) + "_" + Mid(Now, 12, 2) + Mid(Now, 15, 2) + Mid(Now, 18, 2)
+    filelog = FreeFile
+    Open "knxscslog" + t2 + ".txt" For Output As filelog
+    
+    LogPrint (t2)
+    
     iCom = 5
     sCom = GetSetting(APPNAME, "InitValues", "ComPort")
     Select Case sCom
@@ -1731,7 +1794,7 @@ Private Sub Form_Load()
 '   Griglia1.BackColorBkg = vbRed
 
 '    Call setGrid(Griglia1, GR_SW1, GR_BACK_SWON, True, GR_CMD_SWON)
-    frmKnxScsGate.Width = 15000
+    frmKnxScsGate.Width = 16500
     frmKnxScsGate.Height = 10000
 
     Griglia1.Refresh
@@ -2217,6 +2280,7 @@ Dim C As Integer
     Close fnum
 End Sub
 
+
  
 Private Sub LoadData(ByVal flxData As MSFlexGrid, ByVal file_name As String)
 Dim fnum As Integer
@@ -2273,6 +2337,9 @@ Dim start1
         .SelColor = vbBlack
     End With
     Rich.Refresh
+  
+    Print #filelog, The_Data
+'    Write #filelog, The_Data & vbCrLf
 End Function
 Function LogPrintCont(ByVal The_Data As String, Optional ByVal ThisColor As Long = 0) As Boolean
 Dim oldcolor
@@ -2287,6 +2354,8 @@ Dim start1
         .SelColor = vbBlack
     End With
     Rich.Refresh
+    Print #filelog, The_Data;
+'    Write #filelog, The_Data
 End Function
 Function LogPrintContSer(ByVal The_Data As String, Optional ByVal ThisColor As Long = 0) As Boolean
 Dim oldcolor
@@ -2301,6 +2370,8 @@ Dim start1
         .SelColor = vbBlack
     End With
     Rich.Refresh
+    Print #filelog, The_Data;
+'    Write #filelog, The_Data
 End Function
 Function LogPrintHex(ByVal The_Data As String, Optional ByVal ThisColor As Long = 0) As Boolean
 Dim oldcolor
@@ -2315,6 +2386,8 @@ Dim start1
         .SelColor = vbBlack
     End With
     Rich.Refresh
+    Print #filelog, StringToHex(The_Data)
+'    Write #filelog, StringToHex(The_Data) & vbCrLf
 End Function
 Function LogPrintContHex(ByVal The_Data As String, Optional ByVal ThisColor As Long = 0) As Boolean
 Dim oldcolor
@@ -2329,6 +2402,8 @@ Dim start1
         .SelColor = vbBlack
     End With
     Rich.Refresh
+    Print #filelog, StringToHex(The_Data);
+'    Write #filelog, StringToHex(The_Data);
 End Function
 
 ' ===================================================================================================================
@@ -2480,6 +2555,7 @@ Function TryConnectCOM(iBaud)
             Else
                gate = 1
                frmKnxScsGate.Caption = MAINCAPTION + " - SCS MODE"
+               Openb.Enabled = True
             End If
         Else
             LogPrint "OK!! "
